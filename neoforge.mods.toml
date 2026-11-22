@@ -1,0 +1,23 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+
+[[mods]]
+modId = "chestsorter"
+version = "1.0.0"
+displayName = "Chest Sorter"
+description = "Клиентский мод: у каждого сундука свои правила, кнопка раскладывает подходящие предметы из инвентаря."
+
+[[dependencies.chestsorter]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1.0,)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.chestsorter]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1,1.22)"
+ordering = "NONE"
+side = "CLIENT"
