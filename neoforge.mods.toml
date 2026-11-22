@@ -4,7 +4,7 @@ license = "MIT"
 
 [[mods]]
 modId = "chestsorter"
-version = "1.0.0"
+version = "1.0.1"
 displayName = "Chest Sorter"
 description = "Клиентский мод: у каждого сундука свои правила, кнопка раскладывает подходящие предметы из инвентаря."
 

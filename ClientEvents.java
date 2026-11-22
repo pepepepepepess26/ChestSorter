@@ -13,29 +13,34 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
-/** Запоминает, какой контейнер игрок открыл последним (клиент не получает координаты от сервера). */
+/** Определяет, какой контейнер открыт (клиент не получает координаты от сервера). */
 @EventBusSubscriber(modid = ChestSorter.MODID, value = Dist.CLIENT)
 public class ClientEvents {
     public static String lastKey = null;
+
+    /** Ключ сундука: мир|измерение|координаты. Обе половинки двойного сундука дают один ключ. */
+    public static String keyFor(Level level, BlockPos pos) {
+        BlockEntity be = level.getBlockEntity(pos);
+        if (!(be instanceof Container)) return null;
+        BlockState st = level.getBlockState(pos);
+        if (st.getBlock() instanceof ChestBlock && st.hasProperty(ChestBlock.TYPE)
+                && st.getValue(ChestBlock.TYPE) != ChestType.SINGLE) {
+            BlockPos other = pos.relative(ChestBlock.getConnectedDirection(st));
+            if (other.asLong() < pos.asLong()) pos = other;
+        }
+        return worldId() + "|" + level.dimension().location() + "|"
+                + pos.getX() + "," + pos.getY() + "," + pos.getZ();
+    }
 
     @SubscribeEvent
     public static void onRightClick(PlayerInteractEvent.RightClickBlock e) {
         Level level = e.getLevel();
         if (!level.isClientSide()) return;
-        BlockPos pos = e.getPos();
-        BlockEntity be = level.getBlockEntity(pos);
-        if (!(be instanceof Container)) return;
-
-        BlockState st = level.getBlockState(pos);
-        if (st.getBlock() instanceof ChestBlock && st.hasProperty(ChestBlock.TYPE)
-                && st.getValue(ChestBlock.TYPE) != ChestType.SINGLE) {
-            BlockPos other = pos.relative(ChestBlock.getConnectedDirection(st));
-            if (other.asLong() < pos.asLong()) pos = other; // обе половинки двойного сундука = один ключ
-        }
-        lastKey = worldId() + "|" + level.dimension().location() + "|" + pos.getX() + "," + pos.getY() + "," + pos.getZ();
+        String k = keyFor(level, e.getPos());
+        if (k != null) lastKey = k;
     }
 
-    private static String worldId() {
+    public static String worldId() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.getSingleplayerServer() != null) {
             return "sp:" + mc.getSingleplayerServer().getWorldData().getLevelName();

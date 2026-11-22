@@ -10,6 +10,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.BlockHitResult;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -18,35 +19,46 @@ import net.neoforged.neoforge.client.event.ScreenEvent;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Панель справа от окна сундука: иконки категорий + кнопки. */
+/** Панель СЛЕВА от окна сундука: категории + кнопки. */
 @EventBusSubscriber(modid = ChestSorter.MODID, value = Dist.CLIENT)
 public class ScreenHooks {
+    private static final String[] SHORT = {"Инстр.", "Ферма", "Дерево", "Мясо", "Блоки"};
 
     @SubscribeEvent
     public static void onInit(ScreenEvent.Init.Post e) {
         if (!(e.getScreen() instanceof ContainerScreen cs)) return;
-        String key = ClientEvents.lastKey;
-        if (key == null) return;
+        final String key = resolveKey(cs);
 
-        int x = cs.getGuiLeft() + cs.getXSize() + 4;
+        int w = 78;
+        int x = Math.max(2, cs.getGuiLeft() - w - 3);
         int y = cs.getGuiTop();
 
-        // иконки категорий (клик = включить/выключить для этого сундука)
         int i = 0;
         for (Category c : Category.values()) {
-            e.addListener(new CategoryButton(x + i * 22, y, c,
-                    () -> RuleStore.get(key).contains(c.rule()),
-                    b -> toggle(key, c)));
+            e.addListener(new SideButton(x, y + i * 20, w, 18, c.icon.getDefaultInstance(), SHORT[i], c.title,
+                    b -> toggle(key, c), () -> RuleStore.get(key).contains(c.rule())));
             i++;
         }
 
+        int y2 = y + 5 * 20 + 6;
         e.addListener(Button.builder(Component.literal("Сортировать"), b -> deposit(cs, key))
-                .bounds(x, y + 24, 108, 20).build());
-        e.addListener(Button.builder(Component.literal("Свои правила"),
+                .bounds(x, y2, w, 18).build());
+        e.addListener(Button.builder(Component.literal("Правила"),
                         b -> Minecraft.getInstance().setScreen(new RulesScreen(key)))
-                .bounds(x, y + 46, 108, 20).build());
-        e.addListener(Button.builder(Component.literal("Запомнить содержимое"), b -> learn(cs, key))
-                .bounds(x, y + 68, 108, 20).build());
+                .bounds(x, y2 + 20, w, 18).build());
+        e.addListener(Button.builder(Component.literal("Запомнить"), b -> learn(cs, key))
+                .bounds(x, y2 + 40, w, 18).build());
+    }
+
+    /** Ключ сундука: сначала по блоку, на который смотрит игрок, потом по последнему клику, потом по названию. */
+    private static String resolveKey(ContainerScreen cs) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null && mc.hitResult instanceof BlockHitResult bhr) {
+            String k = ClientEvents.keyFor(mc.level, bhr.getBlockPos());
+            if (k != null) return k;
+        }
+        if (ClientEvents.lastKey != null) return ClientEvents.lastKey;
+        return ClientEvents.worldId() + "|container|" + cs.getTitle().getString();
     }
 
     private static void toggle(String key, Category c) {
@@ -62,7 +74,7 @@ public class ScreenHooks {
         Minecraft mc = Minecraft.getInstance();
         List<String> rules = RuleStore.get(key);
         if (rules.isEmpty()) {
-            msg("Выберите иконку категории у этого сундука");
+            msg("Сначала выберите категорию слева");
             return;
         }
         AbstractContainerMenu menu = cs.getMenu();
